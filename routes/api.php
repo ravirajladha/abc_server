@@ -39,6 +39,10 @@ Route::get("/school_search_forum_questions/{data}",[Abc::class,'school_search_fo
 Route::get("/get_school_qna_single/{qna_id}",[Abc::class,'get_school_qna_single']);
 Route::get("/get_school_forum_single/{forum_id}",[Abc::class,'get_school_forum_single']);
 Route::post("/submitSchoolForumAnswer/{forum_id}",[Abc::class,'submitSchoolForumAnswer']);
+Route::post("/connect_parent",[Abc::class,'connect_parent']);
+Route::get("/get_parent/{parent_id}",[Abc::class,'get_parent']);
+Route::get("/subject_stream/{student_id}/{subject_id}",[Abc::class,'subject_stream']);
+
 
 
 

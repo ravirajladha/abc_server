@@ -2044,18 +2044,7 @@ class Abc extends Controller
 
 
     //    ========================== school students ======================
-    public function connect_parent(Request $req)
-    {
-        $parent = User::where('parent_code', $req->parent_code)->first();
-        if($parent->parent_code) {
-            $student = User::where('id', session('rexkod_user_id'))->first();
-            $student->parent_id = $parent->id;
-            $student->save();
-            session()->put('success', 'Parent Connected.');
-            return redirect('/change_password');
-        }
 
-    }
 
 
     public function all_subjects()
@@ -2837,6 +2826,89 @@ class Abc extends Controller
 
     }
 
+    public function connect_parent(Request $req)
+    {
+        $parent = User::where('parent_code', $req->parentCode)->first();
+        if($parent->parent_code) {
+            $student = User::where('id', $req->userId)->first();
+            $student->parent_id = $parent->id;
+            $student->save();
+            return ['parent'=>$parent,"msg" => "Parent Connected"];
+        }
 
+    }
+    public function get_parent($parent_id){
+        $parent = User::where('id', $parent_id)->first();
+        return $parent;
+    }
 
+    public function subject_stream($student_id,$subject_id)
+    {
+
+        $subject = School_subject::where('id', $subject_id)->first();
+        $chapters = Chapter::where('subject', $subject_id)->get();
+        $videos = Chapter_video::whereHas('chapter', function ($query) use ($subject_id) {
+            $query->where('subject', $subject_id);
+        })->get();
+
+        $assesments = School_assesment::with('class', 'subject', 'chapter', 'video')->where('subject_id', $subject_id)->get();
+
+        $Video_play_back = School_video_play_back::where('user_id', $student_id)
+        ->where('subject_id', $subject_id)
+        ->latest('updated_at')
+        ->first();
+        // Now, $video_play_back contains the last updated record with the specified course_id
+        if($Video_play_back) {
+            $video_details = Chapter_video::where('id', $Video_play_back->video_id)->first();
+            $timestamp = $Video_play_back->video_time_stamp;
+
+        } else {
+            $chapter = Chapter::where('subject', $subject_id)->first();
+            $video_details = Chapter_video::where('chapter_id', $chapter->id)->first();
+            $timestamp = 0;
+        }
+
+        $test = School_test::where('subject_id', $subject_id)
+                ->latest()
+                ->first();
+        $test_result = School_test_result::where('test_id', $test->id)
+                ->where('user_id',$student_id)
+                ->latest()
+                ->first();
+
+        $mini_projects = School_mini_project::where('subject_id', $subject_id)->get();
+
+        $assesments_result = School_assesment_result::where('user_id', $student_id)->distinct()
+        ->pluck('video_id');
+        $assesments_given = Chapter_video::whereIn('id', $assesments_result)
+        ->select('id', 'video_name') // Adjust the columns you want to select
+        ->get();
+
+        $notes = School_note::where('student_id', $student_id)->where('subject_id', $subject_id)->get();
+
+        $teacher = Teacher::whereJsonContains('class_and_subject', ['subject_id' => $subject_id])->with('user')->first();
+        // dd($teachers);
+        $sent_messages = School_message::where('sender_id', $student_id)->where('receiver_id', $teacher->auth_id)->get();
+        $received_messages = School_message::where('sender_id', $teacher->auth_id)->where('receiver_id', $student_id)->get();
+
+        $data = [
+            'subject_id' => $subject_id,
+            'subject' => $subject,
+            // 'id' => $tab_id,
+            'videos' => $videos,
+            'chapters' => $chapters,
+            'assesments' => $assesments,
+            'mini_projects' => $mini_projects,
+            'assesments_given' => $assesments_given,
+            'notes' => $notes,
+            'teacher' => $teacher,
+            'sent_messages' => $sent_messages,
+            'received_messages' => $received_messages,
+            'video_details' => $video_details,
+            'video_timestamp' => $timestamp,
+            'test' => $test,
+            'test_result' => $test_result
+        ];
+        return $data;
+    }
 }
